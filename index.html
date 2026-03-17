@@ -84,7 +84,7 @@ function handleMsg(m, isNew) {
   if (m.role === 'typing_stop') { typingEl.style.display = 'none'; return; }
   if (m.role === 'cmd') { executeCmd(m.text); return; }
   if (!isNew && m.role === 'user') { addBubble('user', m.text, false); return; }
-  if (m.role === 'ai') { typingEl.style.display = 'none'; addBubble('ai', m.text, m.is_gif); }
+ if (m.role === 'ai' || (isNew && m.role === 'user')) { typingEl.style.display = 'none'; addBubble(m.role, m.text, m.is_gif); }
 }
 
 function executeCmd(cmd) {
