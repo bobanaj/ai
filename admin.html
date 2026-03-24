@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page introuvable</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d0d0f;--surface:#17171a;--border:rgba(255,255,255,0.07);--green:#22c55e;--text:#f0f0f2;--muted:#555;--purple:#7c3aed}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+    .pw-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:200}
+    .pw-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:320px;display:flex;flex-direction:column;gap:16px;align-items:center}
+    .pw-logo{font-size:32px;margin-bottom:4px}
+    .pw-box h2{font-size:17px;font-weight:500}
+    .pw-box p{font-size:13px;color:var(--muted);text-align:center}
+    .pw-box input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;text-align:center;letter-spacing:6px;outline:none;transition:border-color 0.2s}
+    .pw-box input:focus{border-color:rgba(34,197,94,0.5)}
+    .pw-box button{width:100%;padding:13px;background:var(--green);color:#000;border:none;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity 0.2s}
+    .pw-box button:hover{opacity:0.85}
+    .pw-error{font-size:12px;color:#f87171;display:none}
+
+    .admin-app{display:none;width:100vw;height:100dvh}
+    .layout{display:flex;height:100dvh}
+
+    /* SIDEBAR */
+    .sidebar{width:260px;min-width:260px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:#111113}
+    .sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .sidebar-title{font-size:13px;font-weight:500;flex:1}
+    .online-badge{background:rgba(34,197,94,0.15);color:var(--green);font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid rgba(34,197,94,0.3)}
+    .conv-list{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 transparent}
+    .conv-item{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s;position:relative}
+    .conv-item:hover{background:rgba(255,255,255,0.03)}
+    .conv-item.active{background:rgba(34,197,94,0.06);border-left:3px solid var(--green)}
+    .conv-name{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;margin-bottom:4px}
+    .conv-preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+    .conv-time{font-size:10px;color:#444;margin-top:3px}
+    .unread-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px rgba(34,197,94,0.6)}
+    .empty-convs{padding:50px 16px;text-align:center;color:var(--muted);font-size:12px;line-height:2.2}
+
+    /* MAIN */
+    .main{flex:1;display:flex;flex-direction:column;min-width:0}
+    .main-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:#0f0f12}
+    .main-header-info{flex:1}
+    .main-header-name{font-size:14px;font-weight:500}
+    .main-header-sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+    /* MENU ••• */
+    .cmd-btn{width:34px;height:34px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+    .cmd-btn:hover{border-color:rgba(255,255,255,0.25);color:var(--text);background:rgba(255,255,255,0.04)}
+    .cmd-menu{position:absolute;top:52px;right:16px;background:#16161a;border:1px solid rgba(255,255,255,0.1);border-radius:14px;width:320px;z-index:100;overflow-y:auto;max-height:75vh;box-shadow:0 16px 48px rgba(0,0,0,0.6);display:none}
+    .cmd-menu.open{display:block}
+    .cmd-menu-title{padding:12px 16px;font-size:11px;color:var(--muted);letter-spacing:1.5px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#16161a;text-transform:uppercase}
+    .cmd-section{padding:8px}
+    .cmd-section-label{font-size:11px;color:#666;padding:6px 8px 4px;display:flex;align-items:center;gap:6px}
+    .cmd-row{display:flex;flex-wrap:wrap;gap:6px;padding:4px 8px 10px}
+    .cmd-pill{padding:5px 11px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#ccc;font-family:'DM Sans',sans-serif;transition:all 0.15s;white-space:nowrap}
+    .cmd-pill:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#fff;transform:translateY(-1px)}
+    .cmd-pill.danger:hover{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.5);color:#f87171}
+    .cmd-pill.fun:hover{background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.5);color:#a78bfa}
+    .cmd-pill.love:hover{background:rgba(236,72,153,0.15);border-color:rgba(236,72,153,0.5);color:#f9a8d4}
+
+    .notif-bar{background:rgba(34,197,94,0.08);border-bottom:1px solid rgba(34,197,94,0.15);padding:8px 16px;font-size:13px;color:var(--green);display:none;align-items:center;gap:8px}
+    .typing-indicator{display:none;padding:7px 16px;font-size:12px;color:#a78bfa;background:rgba(167,139,250,0.06);border-bottom:1px solid rgba(167,139,250,0.12);align-items:center;gap:8px}
+
+    .msgs-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:#333 transparent}
+    .no-conv{flex:1;display:flex;align-items:center;justify-content:center;color:#333;font-size:13px;flex-direction:column;gap:12px}
+    .no-conv-icon{font-size:40px;opacity:0.3}
+
+    .bw{display:flex;flex-direction:column;gap:2px}
+    .bw.in{align-items:flex-start}
+    .bw.out{align-items:flex-end}
+    .bw.sys{align-items:center}
+    .blabel{font-size:10px;color:#444;padding:0 6px}
+    .bb{max-width:82%;padding:10px 15px;border-radius:16px;font-size:14px;line-height:1.55;word-break:break-word;animation:msgIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275)}
+    @keyframes msgIn{from{opacity:0;transform:scale(0.9) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    .bb.in{background:#1e1b4b;border:1px solid rgba(99,102,241,0.3);color:#c7d2fe;border-bottom-left-radius:4px}
+    .bb.out{background:#052e16;border:1px solid rgba(34,197,94,0.3);color:#86efac;border-bottom-right-radius:4px}
+    .bb.sys{background:rgba(255,255,255,0.04);color:#555;font-size:11px;border-radius:20px;padding:4px 14px;border:1px solid rgba(255,255,255,0.05)}
+
+    .typing-row{padding:8px 14px;display:flex;gap:8px;border-top:1px solid var(--border)}
+    .t-btn{padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+    .t-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.04)}
+
+    .input-row{padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end;background:#0f0f12}
+    .input-row textarea{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:11px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:46px;max-height:120px;transition:border-color 0.2s}
+    .input-row textarea:focus{border-color:rgba(34,197,94,0.35)}
+    .input-row textarea::placeholder{color:#444}
+    .input-row textarea:disabled{opacity:0.25;cursor:not-allowed}
+    .action-btns{display:flex;flex-direction:column;gap:7px}
+    .abtn{width:42px;height:42px;border-radius:50%;border:none;font-size:16px;cursor:pointer;flex-shrink:0;transition:transform 0.15s,opacity 0.2s,box-shadow 0.2s;display:flex;align-items:center;justify-content:center}
+    .abtn:disabled{opacity:0.25;cursor:not-allowed}
+    .abtn:active{transform:scale(0.88)}
+    .abtn:hover:not(:disabled){transform:scale(1.08)}
+    .abtn-send{background:var(--green);color:#000;box-shadow:0 0 0 0 rgba(34,197,94,0)}
+    .abtn-send:hover:not(:disabled){box-shadow:0 0 16px rgba(34,197,94,0.4)}
+  </style>
+</head>
+<body>
+
+<div class="pw-overlay" id="pw-overlay">
+  <div class="pw-box">
+    <div class="pw-logo">🔐</div>
+    <h2>Accès restreint</h2>
+    <p>Entre le mot de passe secret</p>
+    <input type="password" id="pw-input" placeholder="••••••" maxlength="30" autofocus />
+    <div class="pw-error" id="pw-error">❌ Mot de passe incorrect</div>
+    <button onclick="checkPw()">Accéder</button>
+  </div>
+</div>
+
+<div class="admin-app" id="admin-app">
+  <div class="layout">
+
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Conversations</div>
+        <div class="online-badge">● Live</div>
+      </div>
+      <div class="conv-list" id="conv-list">
+        <div class="empty-convs">😴<br>Aucune conversation<br>En attente de visiteurs...</div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="main-header">
+        <div class="main-header-info">
+          <div class="main-header-name" id="main-name">Sélectionne une conversation</div>
+          <div class="main-header-sub" id="main-sub">← clique à gauche</div>
+        </div>
+        <div style="position:relative">
+          <button class="cmd-btn" id="cmd-btn" onclick="toggleMenu()">•••</button>
+          <div class="cmd-menu" id="cmd-menu">
+            <div class="cmd-menu-title">⚡ Commandes spéciales</div>
+
+            <div class="cmd-section">
+              <div class="cmd-section-label">🎨 Couleurs</div>
+              <div class="cmd-row">
+                <button class="cmd-pill" onclick="sendCmd('/couleur rose')">🌸 Rose</button>
+                <button class="cmd-pill" onclick="sendCmd('/couleur rouge')">🔴 Rouge</button>
+                <button class="cmd-pill" onclick="sendCmd('/couleur bleu')">🔵 Bleu</button>
+                <button class="cmd-pill" onclick="sendCmd('/couleur vert')">🟢 Vert</button>
+                <button class="cmd-pill" onclick="sendCmd('/couleur violet')">🟣 Violet</button>
+                <button class="cmd-pill" onclick="sendCmd('/couleur orange')">🟠 Orange</button>
+                <button class="cmd-pill" onclick="sendCmd('/couleur noir')">⚫ Noir</button>
+                <button class="cmd-pill" onclick="sendCmd('/couleur defaut')">↩️ Défaut</button>
+              </div>
+            </div>
+
+            <div class="cmd-section">
+              <div class="cmd-section-label">🖼️ Thèmes</div>
+              <div class="cmd-row">
+                <button class="cmd-pill fun" onclick="sendCmd('/neon')">💜 Neon</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/retro')">🖥️ Retro</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/vaporwave')">🌊 Vaporwave</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/hacker')">💻 Hacker</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/pastel')">🎀 Pastel</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/midnight')">🌙 Midnight</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/gold')">✨ Gold</button>
+                <button class="cmd-pill love" onclick="sendCmd('/pink')">💗 Pink</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/ocean')">🌊 Ocean</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/sunset')">🌅 Sunset</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/forest')">🌲 Forest</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/lava')">🌋 Lava</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/ice')">🧊 Ice</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/galaxy')">🌌 Galaxy</button>
+              </div>
+            </div>
+
+            <div class="cmd-section">
+              <div class="cmd-section-label">💥 Effets one-shot</div>
+              <div class="cmd-row">
+                <button class="cmd-pill fun" onclick="sendCmd('/shake')">📳 Shake</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/confetti')">🎉 Confetti</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/matrix')">🟩 Matrix</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/disco')">🪩 Disco</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/snow')">❄️ Neige</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/fire')">🔥 Feu</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/explosion')">💥 Explosion</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/alien')">👽 Alien</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/party')">🥳 Party</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/thunderstorm')">⛈️ Orage</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/meteor')">☄️ Météore</button>
+                <button class="cmd-pill love" onclick="sendCmd('/hearts')">❤️ Cœurs</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/stars')">⭐ Étoiles</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/leaves')">🍂 Feuilles</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/coins')">🪙 Argent</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/glitch')">📺 Glitch</button>
+                <button class="cmd-pill danger" onclick="sendCmd('/nuke')">☢️ Nuke</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/aurora')">🌌 Aurora</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/fireworks')">🎆 Feux</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/lasers')">🔴 Lasers</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/ufo')">🛸 UFO</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/tsunami')">🌊 Tsunami</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/bubble')">🫧 Bulles</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/rainbow')">🌈 Rainbow</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/zoom')">🔍 Zoom</button>
+              </div>
+            </div>
+
+            <div class="cmd-section">
+              <div class="cmd-section-label">📳 Mouvements</div>
+              <div class="cmd-row">
+                <button class="cmd-pill fun" onclick="sendCmd('/earthquake')">🌍 Tremblement</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/spin')">🌀 Spin</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/bounce')">⬆️ Bounce</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/shrink')">🔽 Rétrécir</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/bigbig')">🔼 Agrandir</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/drunk')">🥴 Ivre</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/static')">📺 Statique</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/invisible')">👁️ Invisible</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/flip')">🙃 Flip</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/ghost')">👻 Ghost</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/blur')">🌫️ Blur</button>
+              </div>
+            </div>
+
+            <div class="cmd-section">
+              <div class="cmd-section-label">🎭 Personnages</div>
+              <div class="cmd-row">
+                <button class="cmd-pill fun" onclick="sendCmd('/pirate')">☠️ Pirate</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/robot')">🤖 Robot</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/angel')">😇 Ange</button>
+                <button class="cmd-pill danger" onclick="sendCmd('/devil')">😈 Démon</button>
+                <button class="cmd-pill love" onclick="sendCmd('/christmas')">🎄 Noël</button>
+                <button class="cmd-pill danger" onclick="sendCmd('/halloween')">🎃 Halloween</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/ninja')">🥷 Ninja</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/alien2')">👾 Alien IA</button>
+                <button class="cmd-pill love" onclick="sendCmd('/cupid')">💘 Cupidon</button>
+                <button class="cmd-pill fun" onclick="sendCmd('/wizard')">🧙 Sorcier</button>
+              </div>
+            </div>
+
+            <div class="cmd-section">
+              <div class="cmd-section-label">💬 Notifications</div>
+              <div class="cmd-row">
+                <button class="cmd-pill" onclick="promptCmd('/message ', 'Message popup ?')">💬 Popup</button>
+                <button class="cmd-pill danger" onclick="promptCmd('/alerte ', 'Texte alerte ?')">🔴 Alerte</button>
+                <button class="cmd-pill" onclick="promptCmd('/success ', 'Texte succès ?')">🟢 Succès</button>
+                <button class="cmd-pill" onclick="promptCmd('/info ', 'Info ?')">🔵 Info</button>
+                <button class="cmd-pill love" onclick="promptCmd('/love ', 'Message amour ?')">💌 Love</button>
+              </div>
+            </div>
+
+            <div class="cmd-section">
+              <div class="cmd-section-label">⚙️ Contrôle</div>
+              <div class="cmd-row">
+                <button class="cmd-pill" onclick="promptCmd('/titre ', 'Nouveau nom IA ?')">✏️ Renommer</button>
+                <button class="cmd-pill" onclick="promptCmd('/typing ', 'Secondes ?')">⋯ Typing auto</button>
+                <button class="cmd-pill danger" onclick="sendCmd('/bloquer')">🚫 Bloquer</button>
+                <button class="cmd-pill" onclick="sendCmd('/debloquer')">✅ Débloquer</button>
+                <button class="cmd-pill" onclick="sendCmd('/normal')">↩️ Reset tout</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="notif-bar" id="notif-bar" style="display:none">● Nouveau message !</div>
+      <div class="typing-indicator" id="typing-indicator" style="display:none">✍️ En train d'écrire...</div>
+
+      <div class="msgs-area" id="msgs-area">
+        <div class="no-conv"><div class="no-conv-icon">💬</div>Clique sur une conversation</div>
+      </div>
+
+      <div class="typing-row">
+        <button class="t-btn" onclick="sendTyping()">⋯ En train d'écrire</button>
+        <button class="t-btn" onclick="stopTyping()">✕ Stop</button>
+      </div>
+
+      <div class="input-row">
+        <textarea id="admin-input" placeholder="Ta réponse... (Entrée = envoyer)" disabled></textarea>
+        <div class="action-btns">
+          <button class="abtn abtn-send" id="send-btn" onclick="sendReply()" disabled title="Envoyer">✓</button>
+          <button class="abtn" id="ai-btn" onclick="generateAI()" disabled title="Générer réponse IA" style="background:#7c3aed;color:white;font-size:13px;">✨</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SECRET = "squiduu";
+const SUPABASE_URL  = "https://xqfjboboiaevewtypifv.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxZmpib2JvaWFldmV3dHlwaWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MDg3NzQsImV4cCI6MjA4OTI4NDc3NH0.jvpfcNAe0ZN2sUeuU5pO-GyoNN2KNtOQaYmttPfcjpY";
+
+let sb=null, auth=false;
+let conversations={}, activeConv=null;
+let convCounter=0, convNumbers={};
+
+function checkPw() {
+  const val = document.getElementById('pw-input').value;
+  if (val === SECRET) {
+    document.getElementById('pw-overlay').style.display = 'none';
+    document.getElementById('admin-app').style.display = 'block';
+    auth = true;
+    initSupabase();
+  } else {
+    const err = document.getElementById('pw-error');
+    err.style.display = 'block';
+    document.getElementById('pw-input').value = '';
+    setTimeout(() => err.style.display = 'none', 2000);
+  }
+}
+document.getElementById('pw-input').addEventListener('keydown', e => { if(e.key==='Enter') checkPw(); });
+
+async function initSupabase() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const { data } = await sb.from('messages').select('*').order('id');
+  if (data) { data.forEach(m => processMsg(m, false)); renderConvList(); }
+  sb.channel('admin-chan').on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' }, p => {
+    processMsg(p.new, true); renderConvList();
+  }).subscribe();
+}
+
+function processMsg(m, isNew) {
+  const cid = m.conv_id || 'visiteur-1';
+  if (m.role === 'user_typing') { if(activeConv===cid) showTypingIndicator(cid); return; }
+  if (m.role === 'user_typing_stop') { hideTypingIndicator(); return; }
+  if (['typing','typing_stop','cmd'].includes(m.role)) return;
+  if (!conversations[cid]) { convCounter++; convNumbers[cid]=convCounter; conversations[cid]={id:cid,msgs:[],unread:0,lastMsg:'',lastTime:''}; }
+  const conv = conversations[cid];
+  if (!conv.msgs.find(x=>x.id===m.id)) conv.msgs.push(m);
+  conv.lastMsg = m.role==='user' ? m.text : '(toi) '+m.text;
+  conv.lastTime = m.created_at ? new Date(m.created_at).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'}) : '';
+  if (isNew) {
+    if (m.role==='user') {
+      if (activeConv===cid) appendMsg(m);
+      else { conv.unread++; flashNotif(cid); }
+      if (document.hidden) { document.title='🔴 Nouveau message !'; setTimeout(()=>document.title='Admin',3000); }
+    } else if (activeConv===cid) appendMsg(m);
+  }
+}
+
+function renderConvList() {
+  const list = document.getElementById('conv-list');
+  const ids = Object.keys(conversations);
+  if (!ids.length) return;
+  list.innerHTML = '';
+  ids.sort((a,b)=>(conversations[b].msgs.at(-1)?.id||0)-(conversations[a].msgs.at(-1)?.id||0)).forEach(cid => {
+    const conv = conversations[cid];
+    const d = document.createElement('div');
+    d.className = 'conv-item'+(cid===activeConv?' active':'');
+    d.innerHTML = `<div class="conv-name">👤 Visiteur ${convNumbers[cid]} ${conv.unread>0?'<span class="unread-dot"></span>':''}</div><div class="conv-preview">${conv.lastMsg||'...'}</div><div class="conv-time">${conv.lastTime}</div>`;
+    d.onclick = () => selectConv(cid);
+    list.appendChild(d);
+  });
+}
+
+function selectConv(cid) {
+  activeConv = cid;
+  conversations[cid].unread = 0;
+  document.getElementById('main-name').textContent = `Visiteur ${convNumbers[cid]}`;
+  document.getElementById('main-sub').textContent = `${conversations[cid].msgs.filter(m=>m.role==='user').length} messages reçus`;
+  document.getElementById('admin-input').disabled = false;
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('ai-btn').disabled = false;
+  document.getElementById('admin-input').focus();
+  const area = document.getElementById('msgs-area');
+  area.innerHTML = '';
+  conversations[cid].msgs.forEach(m => appendMsg(m));
+  renderConvList();
+}
+
+function appendMsg(m) {
+  const area = document.getElementById('msgs-area');
+  const isIn = m.role === 'user';
+  const wrap = document.createElement('div');
+  wrap.className = 'bw '+(isIn?'in':'out');
+  const label = document.createElement('div');
+  label.className = 'blabel';
+  label.textContent = isIn ? 'Utilisateur' : 'Toi (IA)';
+  const b = document.createElement('div');
+  b.className = 'bb '+(isIn?'in':'out');
+  b.textContent = m.text;
+  wrap.appendChild(label);
+  wrap.appendChild(b);
+  area.appendChild(wrap);
+  area.scrollTop = area.scrollHeight;
+}
+
+function flashNotif(cid) {
+  const n = document.getElementById('notif-bar');
+  n.textContent = `● Nouveau message — Visiteur ${convNumbers[cid]} !`;
+  n.style.display = 'flex';
+  setTimeout(() => n.style.display='none', 4000);
+}
+
+function showTypingIndicator(cid) {
+  const bar = document.getElementById('typing-indicator');
+  bar.textContent = `✍️ Visiteur ${convNumbers[cid]} est en train d'écrire...`;
+  bar.style.display = 'flex';
+  clearTimeout(window._utTimer);
+  window._utTimer = setTimeout(() => hideTypingIndicator(), 5000);
+}
+
+function hideTypingIndicator() {
+  document.getElementById('typing-indicator').style.display = 'none';
+}
+
+async function generateAI() {
+  if (!activeConv) return;
+  const btn = document.getElementById('ai-btn');
+  const ta = document.getElementById('admin-input');
+  btn.textContent = '⏳';
+  btn.disabled = true;
+
+  const conv = conversations[activeConv];
+  const msgs = conv.msgs.slice(-8).filter(m => m.role==='user'||m.role==='ai').map(m => ({
+    role: m.role==='user' ? 'user' : 'assistant',
+    content: m.text
+  }));
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer gsk_REMPLACE_PAR_TA_CLE_GROQ'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: 'Tu es un assistant IA sympa. Réponds en français, naturellement, max 2-3 phrases.' },
+          ...(msgs.length ? msgs : [{ role:'user', content:'Bonjour' }])
+        ],
+        max_tokens: 200
+      })
+    });
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    if (text) { ta.value = text; ta.focus(); }
+  } catch(e) { console.error(e); }
+
+  btn.textContent = '✨';
+  btn.disabled = false;
+}
+
+async function sendReply() {
+  if (!auth || !sb || !activeConv) return;
+  const ta = document.getElementById('admin-input');
+  const text = ta.value.trim();
+  if (!text) return;
+  ta.value = '';
+  ta.style.borderColor = '';
+  await sb.from('messages').insert({ role:'ai', text, conv_id:activeConv });
+}
+
+async function sendCmd(cmd) {
+  if (!activeConv) { alert('Sélectionne une conversation d\'abord !'); return; }
+  closeMenu();
+  await sb.from('messages').insert({ role:'cmd', text:cmd, conv_id:activeConv });
+  const area = document.getElementById('msgs-area');
+  const wrap = document.createElement('div');
+  wrap.className = 'bw sys';
+  const b = document.createElement('div');
+  b.className = 'bb sys';
+  b.textContent = '⚡ '+cmd;
+  wrap.appendChild(b);
+  area.appendChild(wrap);
+  area.scrollTop = area.scrollHeight;
+}
+
+async function promptCmd(prefix, question) {
+  const val = prompt(question);
+  if (val !== null && val.trim()) sendCmd(prefix + val.trim());
+}
+
+async function sendTyping() { if(sb&&activeConv) await sb.from('messages').insert({role:'typing',text:'',conv_id:activeConv}); }
+async function stopTyping() { if(sb&&activeConv) await sb.from('messages').insert({role:'typing_stop',text:'',conv_id:activeConv}); }
+
+document.getElementById('admin-input').addEventListener('keydown', e => {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); }
+});
+
+function toggleMenu() { document.getElementById('cmd-menu').classList.toggle('open'); }
+function closeMenu() { document.getElementById('cmd-menu').classList.remove('open'); }
+document.addEventListener('click', e => { if(!e.target.closest('#cmd-btn')&&!e.target.closest('#cmd-menu')) closeMenu(); });
+</script>
+</body>
+</html>
